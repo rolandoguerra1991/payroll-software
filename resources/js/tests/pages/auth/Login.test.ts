@@ -1,5 +1,6 @@
 import { shallowMount } from '@vue/test-utils';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import AuthLayout from '@/layouts/AuthLayout.vue';
 import Login from '@/pages/auth/Login.vue';
 
 const visit = vi.hoisted(() => vi.fn());
@@ -14,7 +15,9 @@ vi.mock('@inertiajs/vue3', async (importOriginal) => {
 });
 
 const mountLogin = () =>
-    shallowMount(Login, { global: { renderStubDefaultSlot: true } });
+    shallowMount(Login, {
+        global: { renderStubDefaultSlot: true, stubs: { TextInput: false } },
+    });
 
 describe('auth/Login', () => {
     beforeEach(() => {
@@ -23,41 +26,31 @@ describe('auth/Login', () => {
         visit.mockClear();
     });
 
-    it('renders the sign in form', () => {
+    it('renders the sign in copy through the auth layout', () => {
+        const layout = mountLogin().findComponent(AuthLayout);
+
+        expect(layout.props('title')).toBe('Sign in');
+        expect(layout.props('heading')).toBe('Sign in');
+        expect(layout.props('description')).toBe(
+            'Access your payroll workspace.',
+        );
+    });
+
+    it('renders the credentials form and the password reset link', () => {
         const wrapper = mountLogin();
         const text = wrapper.text();
 
-        expect(wrapper.html()).toContain('title="Sign in"');
-        expect(text).toContain('Sign in');
-        expect(text).toContain('HR staff');
-        expect(text).toContain('Employee');
-        expect(text).toContain('Human resources and payroll');
+        expect(text).toContain('Work email');
+        expect(text).toContain('Password');
+        expect(text).toContain('Keep me signed in');
+        expect(text).toContain('Forgot password?');
         expect(text).toContain('Self sign-up is disabled');
-    });
-
-    it('opens the HR panel by default', async () => {
-        const wrapper = mountLogin();
-
-        await wrapper.find('form').trigger('submit');
-
-        expect(visit).toHaveBeenCalledWith('/admin/dashboard');
-    });
-
-    it('opens the employee portal for the employee role', async () => {
-        const wrapper = mountLogin();
-        const employee = wrapper
-            .findAll('button')
-            .find((button) => button.text() === 'Employee');
-
-        await employee?.trigger('click');
-
-        expect(wrapper.find('button[aria-pressed="true"]').text()).toBe(
-            'Employee',
+        expect(wrapper.find('link-stub').attributes('href')).toBe(
+            '/forgot-password',
         );
-
-        await wrapper.find('form').trigger('submit');
-
-        expect(visit).toHaveBeenCalledWith('/portal/dashboard');
+        expect(wrapper.find<HTMLInputElement>('#email').element.autofocus).toBe(
+            false,
+        );
     });
 
     it('keeps the typed credentials and remember flag in the form state', async () => {
@@ -79,16 +72,11 @@ describe('auth/Login', () => {
         ).toBe(true);
     });
 
-    it('switches the color theme', async () => {
+    it('opens the HR panel on submit', async () => {
         const wrapper = mountLogin();
 
-        await wrapper
-            .find('button[aria-label="Switch to dark theme"]')
-            .trigger('click');
+        await wrapper.find('form').trigger('submit');
 
-        expect(document.documentElement.classList.contains('dark')).toBe(true);
-        expect(
-            wrapper.find('button[aria-label="Switch to light theme"]').exists(),
-        ).toBe(true);
+        expect(visit).toHaveBeenCalledWith('/admin/dashboard');
     });
 });
