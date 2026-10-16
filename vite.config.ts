@@ -42,11 +42,36 @@ export default defineConfig({
             ],
         },
     },
+    test: {
+        environment: 'jsdom',
+        include: ['resources/js/tests/**/*.test.ts'],
+        coverage: {
+            provider: 'v8',
+            reporter: [['text', { skipFull: false }], 'html'],
+            reportsDirectory: 'coverage',
+            // Only production source. Add an entry here when a new source
+            // folder is created (e.g. stores, services).
+            include: [
+                'resources/js/components/**/*.{ts,vue}',
+                'resources/js/composables/**/*.{ts,vue}',
+                'resources/js/layouts/**/*.{ts,vue}',
+                'resources/js/lib/**/*.ts',
+                'resources/js/pages/**/*.{ts,vue}',
+            ],
+            exclude: ['resources/js/components/ui/**'],
+            // Every source file must be fully covered; CI fails otherwise.
+            thresholds: {
+                100: true,
+                perFile: true,
+            },
+        },
+    },
     lint: {
         ignorePatterns: [
             'vendor/**',
             'node_modules/**',
             'public/**',
+            'coverage/**',
             'bootstrap/ssr/**',
             'tailwind.config.js',
             'resources/js/actions/**',
@@ -69,6 +94,7 @@ export default defineConfig({
         ignorePatterns: [
             '.github/**',
             'composer.json',
+            'coverage/**',
             'resources/js/components/ui/*',
             'resources/views/mail/*',
         ],
