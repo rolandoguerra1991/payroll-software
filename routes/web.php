@@ -2,6 +2,4 @@
 
 use Illuminate\Support\Facades\Route;
 
-Route::get("/", function () {
-    return 'HI!!';
-});
+Route::inertia('/', 'Welcome')->name('home');
