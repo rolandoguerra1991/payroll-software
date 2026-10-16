@@ -4,16 +4,7 @@ import { ref } from 'vue';
 import Button from '@/components/ui/Button.vue';
 import Icon from '@/components/ui/Icon.vue';
 import { useTheme } from '@/composables/useTheme';
-import { cn } from '@/lib/utils';
 import { dashboard as adminDashboard } from '@/routes/admin';
-import { dashboard as portalDashboard } from '@/routes/portal';
-
-type Panel = 'admin' | 'portal';
-
-const panels: { value: Panel; label: string }[] = [
-    { value: 'admin', label: 'HR staff' },
-    { value: 'portal', label: 'Employee' },
-];
 
 const highlights: string[] = [
     'Payslips, bonuses and deductions in one place',
@@ -21,7 +12,6 @@ const highlights: string[] = [
     'Employee records always up to date',
 ];
 
-const panel = ref<Panel>('admin');
 const email = ref('');
 const password = ref('');
 const remember = ref(false);
@@ -29,9 +19,7 @@ const remember = ref(false);
 const { theme, toggleTheme } = useTheme();
 
 function submit(): void {
-    router.visit(
-        panel.value === 'admin' ? adminDashboard.url() : portalDashboard.url(),
-    );
+    router.visit(adminDashboard.url());
 }
 </script>
 
@@ -127,35 +115,6 @@ function submit(): void {
                 </p>
 
                 <form class="mt-8 space-y-5" @submit.prevent="submit">
-                    <div>
-                        <span
-                            class="block text-sm font-medium text-slate-700 dark:text-slate-200"
-                        >
-                            Sign in as
-                        </span>
-                        <div
-                            class="mt-2 grid grid-cols-2 gap-2 rounded-lg bg-slate-100 p-1 dark:bg-slate-900"
-                        >
-                            <button
-                                v-for="option in panels"
-                                :key="option.value"
-                                type="button"
-                                :class="
-                                    cn(
-                                        'rounded-md px-3 py-2 text-sm font-medium transition-colors',
-                                        panel === option.value
-                                            ? 'bg-white text-slate-900 shadow-sm dark:bg-slate-800 dark:text-white'
-                                            : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200',
-                                    )
-                                "
-                                :aria-pressed="panel === option.value"
-                                @click="panel = option.value"
-                            >
-                                {{ option.label }}
-                            </button>
-                        </div>
-                    </div>
-
                     <div>
                         <label
                             for="email"
