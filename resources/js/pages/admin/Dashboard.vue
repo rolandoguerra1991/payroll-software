@@ -6,7 +6,8 @@ import Card from '@/components/ui/Card.vue';
 import Icon from '@/components/ui/Icon.vue';
 import PageHeader from '@/components/ui/PageHeader.vue';
 import PanelLayout from '@/layouts/PanelLayout.vue';
-import { departments, employees, positions } from '@/routes/admin';
+import { employees, positions } from '@/routes/admin';
+import { index as departmentsIndex } from '@/routes/admin/departments';
 import type { IconName } from '@/types';
 
 defineOptions({ layout: PanelLayout });
@@ -309,7 +310,7 @@ const payrollRuns: {
                 <span>Payroll closes 3 days before the payment date.</span>
                 <Link
                     class="font-medium text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
-                    :href="departments.url()"
+                    :href="departmentsIndex.url()"
                 >
                     Review departments
                 </Link>

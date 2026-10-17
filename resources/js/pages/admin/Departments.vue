@@ -1,190 +1,332 @@
 <script setup lang="ts">
-import { Head, Link } from '@inertiajs/vue3';
+import { Head, useForm } from '@inertiajs/vue3';
+import { computed, ref } from 'vue';
 import Button from '@/components/ui/Button.vue';
 import Card from '@/components/ui/Card.vue';
 import Icon from '@/components/ui/Icon.vue';
+import Modal from '@/components/ui/Modal.vue';
 import PageHeader from '@/components/ui/PageHeader.vue';
+import TextInput from '@/components/ui/TextInput.vue';
 import PanelLayout from '@/layouts/PanelLayout.vue';
-import { employees } from '@/routes/admin';
-import type { IconName } from '@/types';
+import {
+    buildDepartmentTree,
+    departmentDescendantIds,
+    flattenDepartmentTree,
+    visibleDepartmentRows,
+    type DepartmentOption,
+} from '@/lib/departments';
+import {
+    destroy as destroyDepartment,
+    store as storeDepartment,
+    update as updateDepartment,
+} from '@/routes/admin/departments';
 
 defineOptions({ layout: PanelLayout });
 
-type Department = {
-    name: string;
-    icon: IconName;
-    iconClasses: string;
-    manager: string;
-    headcount: string;
-    payroll: string;
-    openPositions: string;
-};
+const props = defineProps<{
+    departments: DepartmentOption[];
+    status?: string;
+}>();
 
-const departments: Department[] = [
-    {
-        name: 'Technology',
-        icon: 'briefcase',
-        iconClasses:
-            'bg-blue-50 text-blue-600 dark:bg-blue-500/10 dark:text-blue-400',
-        manager: 'Laura Gomez',
-        headcount: '42',
-        payroll: '$36,300',
-        openPositions: '2',
-    },
-    {
-        name: 'Operations',
-        icon: 'building',
-        iconClasses:
-            'bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400',
-        manager: 'Pedro Sanz',
-        headcount: '31',
-        payroll: '$22,480',
-        openPositions: '1',
-    },
-    {
-        name: 'Sales',
-        icon: 'trending-up',
-        iconClasses:
-            'bg-amber-50 text-amber-600 dark:bg-amber-500/10 dark:text-amber-400',
-        manager: 'Marina Leon',
-        headcount: '24',
-        payroll: '$15,560',
-        openPositions: '3',
-    },
-    {
-        name: 'Finance',
-        icon: 'wallet',
-        iconClasses:
-            'bg-indigo-50 text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-400',
-        manager: 'Jose Cruz',
-        headcount: '14',
-        payroll: '$8,960',
-        openPositions: '0',
-    },
-    {
-        name: 'People',
-        icon: 'users',
-        iconClasses:
-            'bg-rose-50 text-rose-600 dark:bg-rose-500/10 dark:text-rose-400',
-        manager: 'Ana Rivas',
-        headcount: '9',
-        payroll: '$3,120',
-        openPositions: '1',
-    },
-    {
-        name: 'Support',
-        icon: 'clock',
-        iconClasses:
-            'bg-slate-100 text-slate-600 dark:bg-slate-500/10 dark:text-slate-300',
-        manager: 'Diego Torres',
-        headcount: '8',
-        payroll: '$2,890',
-        openPositions: '0',
-    },
-];
+const form = useForm<{ name: string; parent_id: number | null }>({
+    name: '',
+    parent_id: null,
+});
+
+const editing = ref<DepartmentOption | null>(null);
+const formOpen = ref(false);
+const expanded = ref<Set<number>>(defaultExpandedIds());
+
+const tree = computed(() => buildDepartmentTree(props.departments));
+const rows = computed(() => visibleDepartmentRows(tree.value, expanded.value));
+const formTitle = computed(() =>
+    editing.value === null ? 'New department' : `Edit ${editing.value.name}`,
+);
+const description = computed(
+    () =>
+        `${props.departments.length} ${
+            props.departments.length === 1 ? 'department' : 'departments'
+        } · Master data for your organization.`,
+);
+const parentOptions = computed(() => {
+    const excluded = new Set<number>();
+
+    if (editing.value !== null) {
+        excluded.add(editing.value.id);
+
+        for (const id of departmentDescendantIds(
+            tree.value,
+            editing.value.id,
+        )) {
+            excluded.add(id);
+        }
+    }
+
+    return flattenDepartmentTree(tree.value)
+        .filter((row) => !excluded.has(row.department.id))
+        .map((row) => ({
+            id: row.department.id,
+            label: `${'— '.repeat(row.depth)}${row.department.name}`,
+        }));
+});
+
+function defaultExpandedIds(): Set<number> {
+    return new Set(
+        props.departments
+            .filter((department) => department.parent_id !== null)
+            .map((department) => department.parent_id as number),
+    );
+}
+
+function toggle(departmentId: number): void {
+    const next = new Set(expanded.value);
+
+    if (next.has(departmentId)) {
+        next.delete(departmentId);
+    } else {
+        next.add(departmentId);
+    }
+
+    expanded.value = next;
+}
+
+function openCreate(parentId: number | null = null): void {
+    editing.value = null;
+    form.reset();
+    form.clearErrors();
+    form.parent_id = parentId;
+    formOpen.value = true;
+}
+
+function openEdit(department: DepartmentOption): void {
+    editing.value = department;
+    form.clearErrors();
+    form.name = department.name;
+    form.parent_id = department.parent_id;
+    formOpen.value = true;
+}
+
+function closeForm(): void {
+    formOpen.value = false;
+    editing.value = null;
+    form.reset();
+    form.clearErrors();
+}
+
+function submit(): void {
+    if (editing.value !== null) {
+        form.put(updateDepartment.url(editing.value.id), {
+            onSuccess: () => closeForm(),
+        });
+
+        return;
+    }
+
+    form.post(storeDepartment.url(), {
+        onSuccess: () => closeForm(),
+    });
+}
+
+function remove(department: DepartmentOption): void {
+    if (
+        !window.confirm(
+            `Delete "${department.name}"? Its sub-departments will move to the top level.`,
+        )
+    ) {
+        return;
+    }
+
+    form.delete(destroyDepartment.url(department.id));
+}
 </script>
 
 <template>
     <div>
         <Head title="Departments" />
 
-        <PageHeader
-            title="Departments"
-            description="6 departments · 128 employees · $86,420 monthly payroll."
-        >
+        <PageHeader title="Departments" :description="description">
             <template #actions>
-                <Button>
-                    <Icon name="building" class="h-4 w-4" />
+                <Button @click="openCreate()">
+                    <Icon name="plus" class="h-4 w-4" />
                     New department
                 </Button>
             </template>
         </PageHeader>
 
-        <div class="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
-            <Card
-                v-for="department in departments"
-                :key="department.name"
-                class="flex flex-col p-5"
-            >
-                <div class="flex items-start justify-between gap-3">
-                    <span
-                        class="flex h-11 w-11 items-center justify-center rounded-lg"
-                        :class="department.iconClasses"
+        <p
+            v-if="status"
+            role="status"
+            class="mb-6 rounded-lg bg-emerald-50 px-4 py-3 text-sm text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400"
+        >
+            {{ status }}
+        </p>
+
+        <Modal :open="formOpen" :title="formTitle" @close="closeForm">
+            <form class="space-y-5" @submit.prevent="submit">
+                <TextInput
+                    id="name"
+                    v-model="form.name"
+                    name="name"
+                    label="Name"
+                    placeholder="e.g. Engineering"
+                    autofocus
+                    :error="form.errors.name"
+                />
+
+                <div>
+                    <label
+                        for="parent_id"
+                        class="block text-sm font-medium text-slate-700 dark:text-slate-200"
                     >
-                        <Icon :name="department.icon" class="h-5 w-5" />
-                    </span>
-                    <span class="text-xs text-slate-500 dark:text-slate-400">
-                        {{ department.openPositions }} open positions
-                    </span>
+                        Parent department
+                    </label>
+                    <select
+                        id="parent_id"
+                        v-model="form.parent_id"
+                        name="parent_id"
+                        :aria-invalid="form.errors.parent_id ? true : undefined"
+                        :aria-describedby="
+                            form.errors.parent_id
+                                ? 'parent_id-error'
+                                : undefined
+                        "
+                        class="mt-2 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none dark:border-slate-700 dark:bg-slate-900 dark:text-white"
+                    >
+                        <option :value="null">No parent (top level)</option>
+                        <option
+                            v-for="option in parentOptions"
+                            :key="option.id"
+                            :value="option.id"
+                        >
+                            {{ option.label }}
+                        </option>
+                    </select>
+                    <p
+                        v-if="form.errors.parent_id"
+                        id="parent_id-error"
+                        role="alert"
+                        class="mt-2 text-sm text-red-600 dark:text-red-400"
+                    >
+                        {{ form.errors.parent_id }}
+                    </p>
                 </div>
 
-                <h2
-                    class="mt-4 text-base font-semibold text-slate-900 dark:text-white"
-                >
-                    {{ department.name }}
-                </h2>
-                <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                    Manager · {{ department.manager }}
-                </p>
+                <div class="flex items-center gap-3">
+                    <Button type="submit" :disabled="form.processing">
+                        {{
+                            editing === null
+                                ? 'Create department'
+                                : 'Save changes'
+                        }}
+                    </Button>
+                    <Button variant="outline" @click="closeForm">
+                        Cancel
+                    </Button>
+                </div>
+            </form>
+        </Modal>
 
-                <dl
-                    class="mt-5 grid grid-cols-2 gap-4 border-t border-slate-100 pt-4 dark:border-slate-800"
-                >
-                    <div>
-                        <dt class="text-xs text-slate-500 dark:text-slate-400">
-                            Employees
-                        </dt>
-                        <dd
-                            class="mt-1 text-sm font-semibold text-slate-900 dark:text-white"
-                        >
-                            {{ department.headcount }}
-                        </dd>
-                    </div>
-                    <div>
-                        <dt class="text-xs text-slate-500 dark:text-slate-400">
-                            Monthly payroll
-                        </dt>
-                        <dd
-                            class="mt-1 text-sm font-semibold text-slate-900 dark:text-white"
-                        >
-                            {{ department.payroll }}
-                        </dd>
-                    </div>
-                </dl>
+        <Card>
+            <div
+                v-if="rows.length === 0"
+                class="p-8 text-center text-sm text-slate-500 dark:text-slate-400"
+            >
+                No departments yet. Create the first one to get started.
+            </div>
 
-                <Link
-                    class="mt-5 inline-flex items-center gap-1 text-sm font-medium text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
-                    :href="employees.url()"
-                >
-                    View employees
-                    <Icon name="arrow-right" class="h-4 w-4" />
-                </Link>
-            </Card>
-        </div>
-
-        <Card class="mt-6 p-5">
-            <h2 class="text-sm font-semibold text-slate-900 dark:text-white">
-                Payroll distribution
-            </h2>
-            <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                Cost per department for the current period.
-            </p>
-            <ul class="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                <li
-                    v-for="department in departments"
-                    :key="`cost-${department.name}`"
-                    class="flex items-center justify-between rounded-lg bg-slate-50 px-4 py-3 dark:bg-slate-800/50"
-                >
-                    <span class="text-sm text-slate-600 dark:text-slate-300">
-                        {{ department.name }}
-                    </span>
-                    <span
-                        class="text-sm font-semibold text-slate-900 dark:text-white"
+            <table v-else class="w-full text-left text-sm">
+                <thead>
+                    <tr
+                        class="border-b border-slate-200 text-xs tracking-wide text-slate-500 uppercase dark:border-slate-800 dark:text-slate-400"
                     >
-                        {{ department.payroll }}
-                    </span>
-                </li>
-            </ul>
+                        <th class="px-5 py-3 font-medium">Department</th>
+                        <th class="px-5 py-3 font-medium">Sub-departments</th>
+                        <th class="px-5 py-3 text-right font-medium">
+                            Actions
+                        </th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
+                    <tr
+                        v-for="row in rows"
+                        :key="row.department.id"
+                        class="hover:bg-slate-50 dark:hover:bg-slate-800/40"
+                    >
+                        <td class="px-5 py-3">
+                            <div
+                                class="flex items-center gap-2"
+                                :style="{
+                                    paddingLeft: `${row.depth * 1.5}rem`,
+                                }"
+                            >
+                                <button
+                                    v-if="row.hasChildren"
+                                    type="button"
+                                    class="flex h-6 w-6 items-center justify-center rounded text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-700"
+                                    :aria-label="`Toggle ${row.department.name}`"
+                                    :aria-expanded="
+                                        expanded.has(row.department.id)
+                                    "
+                                    @click="toggle(row.department.id)"
+                                >
+                                    <Icon
+                                        name="chevron-right"
+                                        class="h-4 w-4 transition-transform"
+                                        :class="
+                                            expanded.has(row.department.id)
+                                                ? 'rotate-90'
+                                                : ''
+                                        "
+                                    />
+                                </button>
+                                <span
+                                    v-else
+                                    class="inline-block h-6 w-6"
+                                    aria-hidden="true"
+                                />
+                                <span
+                                    class="font-medium text-slate-900 dark:text-white"
+                                >
+                                    {{ row.department.name }}
+                                </span>
+                            </div>
+                        </td>
+                        <td
+                            class="px-5 py-3 text-slate-500 dark:text-slate-400"
+                        >
+                            {{ row.department.children.length }}
+                        </td>
+                        <td class="px-5 py-3">
+                            <div class="flex items-center justify-end gap-1">
+                                <button
+                                    type="button"
+                                    class="flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800"
+                                    :aria-label="`Add sub-department to ${row.department.name}`"
+                                    @click="openCreate(row.department.id)"
+                                >
+                                    <Icon name="plus" class="h-4 w-4" />
+                                </button>
+                                <button
+                                    type="button"
+                                    class="flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800"
+                                    :aria-label="`Edit ${row.department.name}`"
+                                    @click="openEdit(row.department)"
+                                >
+                                    <Icon name="pencil" class="h-4 w-4" />
+                                </button>
+                                <button
+                                    type="button"
+                                    class="flex h-8 w-8 items-center justify-center rounded-lg text-rose-500 hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-500/10"
+                                    :aria-label="`Delete ${row.department.name}`"
+                                    @click="remove(row.department)"
+                                >
+                                    <Icon name="trash" class="h-4 w-4" />
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
         </Card>
     </div>
 </template>
