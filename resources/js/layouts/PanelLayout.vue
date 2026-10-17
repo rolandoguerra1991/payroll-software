@@ -4,13 +4,13 @@ import { computed, ref } from 'vue';
 import AppSidebar from '@/components/shell/AppSidebar.vue';
 import Icon from '@/components/ui/Icon.vue';
 import { useTheme } from '@/composables/useTheme';
+import { USER_ROLE_LABELS } from '@/constants/roles';
 import { logout } from '@/routes';
 import type { IconName, NavigationItem, SidebarUser } from '@/types';
 
 type PanelMeta = {
     brand: string;
     caption: string;
-    user: SidebarUser;
     switchLabel: string;
     switchHref: string;
     switchIcon: IconName;
@@ -34,7 +34,6 @@ const portalNavigation: NavigationItem[] = [
 const adminPanel: PanelMeta = {
     brand: 'Payroll HR',
     caption: 'Human Resources panel',
-    user: { name: 'Ana Rivas', role: 'HR Coordinator' },
     switchLabel: 'Open employee portal',
     switchHref: '/portal/dashboard',
     switchIcon: 'wallet',
@@ -43,7 +42,6 @@ const adminPanel: PanelMeta = {
 const portalPanel: PanelMeta = {
     brand: 'Employee Portal',
     caption: 'Your payroll and attendance',
-    user: { name: 'Carlos Mendez', role: 'Senior Developer' },
     switchLabel: 'Back to HR panel',
     switchHref: '/admin/dashboard',
     switchIcon: 'users',
@@ -55,10 +53,21 @@ const { theme, toggleTheme } = useTheme();
 const logoutUrl = logout.url();
 
 const isAdmin = computed(() => page.url.startsWith('/admin'));
+const canAccessAdminPanel = computed(
+    () => page.props.auth.user.role !== 'employee',
+);
 const navigation = computed(() =>
     isAdmin.value ? adminNavigation : portalNavigation,
 );
 const panel = computed(() => (isAdmin.value ? adminPanel : portalPanel));
+const sidebarUser = computed<SidebarUser>(() => ({
+    name: page.props.auth.user.name,
+    role: USER_ROLE_LABELS[page.props.auth.user.role],
+}));
+// Employees cannot reach the administration panel, so they get no panel switch.
+const panelSwitch = computed(() =>
+    canAccessAdminPanel.value ? panel.value : null,
+);
 const themeLabel = computed(() =>
     theme.value === 'dark' ? 'Switch to light theme' : 'Switch to dark theme',
 );
@@ -80,10 +89,10 @@ const themeIcon = computed(() => (theme.value === 'dark' ? 'sun' : 'moon'));
             :active-href="page.url"
             :brand="panel.brand"
             :caption="panel.caption"
-            :user="panel.user"
-            :switch-label="panel.switchLabel"
-            :switch-href="panel.switchHref"
-            :switch-icon="panel.switchIcon"
+            :user="sidebarUser"
+            :switch-label="panelSwitch?.switchLabel"
+            :switch-href="panelSwitch?.switchHref"
+            :switch-icon="panelSwitch?.switchIcon"
             :logout-href="logoutUrl"
             @close="sidebarOpen = false"
         />

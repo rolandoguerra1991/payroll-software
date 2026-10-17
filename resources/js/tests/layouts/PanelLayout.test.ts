@@ -6,12 +6,20 @@ import PanelLayout from '@/layouts/PanelLayout.vue';
 
 const pageState = vi.hoisted(() => ({ url: '/admin/dashboard' }));
 
+const userState = vi.hoisted(() => ({
+    name: 'Ana Rivas',
+    role: 'admin' as 'admin' | 'hr' | 'employee',
+}));
+
 vi.mock('@inertiajs/vue3', async (importOriginal) => {
     const actual = await importOriginal<typeof import('@inertiajs/vue3')>();
 
     return {
         ...actual,
-        usePage: () => ({ url: pageState.url }),
+        usePage: () => ({
+            url: pageState.url,
+            props: { auth: { user: userState } },
+        }),
     };
 });
 
@@ -23,6 +31,8 @@ describe('PanelLayout', () => {
         window.localStorage.clear();
         document.documentElement.classList.remove('dark');
         pageState.url = '/admin/dashboard';
+        userState.name = 'Ana Rivas';
+        userState.role = 'admin';
     });
 
     it('uses the HR panel on admin routes', () => {
@@ -35,12 +45,18 @@ describe('PanelLayout', () => {
             href: '/admin/employees',
             icon: 'users',
         });
+        expect(sidebar.props('user')).toEqual({
+            name: 'Ana Rivas',
+            role: 'Administrator',
+        });
         expect(sidebar.props('switchLabel')).toBe('Open employee portal');
         expect(sidebar.props('logoutHref')).toBe('/logout');
     });
 
     it('uses the employee portal on portal routes', () => {
         pageState.url = '/portal/payroll';
+        userState.name = 'Carlos Mendez';
+        userState.role = 'employee';
 
         const sidebar = mountLayout().findComponent(AppSidebar);
 
@@ -48,8 +64,25 @@ describe('PanelLayout', () => {
         expect(sidebar.props('items')).toHaveLength(4);
         expect(sidebar.props('user')).toEqual({
             name: 'Carlos Mendez',
-            role: 'Senior Developer',
+            role: 'Employee',
         });
+    });
+
+    it('hides the panel switch from employees', () => {
+        pageState.url = '/portal/payroll';
+        userState.role = 'employee';
+
+        const sidebar = mountLayout().findComponent(AppSidebar);
+
+        expect(sidebar.props('switchHref')).toBeUndefined();
+    });
+
+    it('lets HR switch back to the admin panel from the portal', () => {
+        pageState.url = '/portal/payroll';
+        userState.role = 'hr';
+
+        const sidebar = mountLayout().findComponent(AppSidebar);
+
         expect(sidebar.props('switchHref')).toBe('/admin/dashboard');
     });
 
