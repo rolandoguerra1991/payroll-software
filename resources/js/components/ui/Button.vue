@@ -9,8 +9,9 @@ const props = withDefaults(
         variant?: Variant;
         href?: string;
         type?: 'button' | 'submit';
+        disabled?: boolean;
     }>(),
-    { variant: 'primary', href: undefined, type: 'button' },
+    { variant: 'primary', href: undefined, type: 'button', disabled: false },
 );
 
 const base =
@@ -40,6 +41,7 @@ const classes = cn(base, variants[props.variant]);
     <button
         v-else
         :type="type"
+        :disabled="disabled"
         :class="classes"
     >
         <slot />

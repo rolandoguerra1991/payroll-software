@@ -1,18 +1,17 @@
 <script setup lang="ts">
-import { router } from '@inertiajs/vue3';
+import { useForm } from '@inertiajs/vue3';
 import { ref } from 'vue';
 import Button from '@/components/ui/Button.vue';
 import Icon from '@/components/ui/Icon.vue';
 import TextInput from '@/components/ui/TextInput.vue';
 import AuthLayout from '@/layouts/AuthLayout.vue';
-import { dashboard as adminDashboard } from '@/routes/admin';
+import { store as twoFactorStore } from '@/routes/two-factor/login';
 
-const code = ref('');
-const recoveryCode = ref('');
+const form = useForm({ code: '', recovery_code: '' });
 const isUsingRecoveryCode = ref(false);
 
 function submit(): void {
-    router.visit(adminDashboard.url());
+    form.post(twoFactorStore.url());
 }
 </script>
 
@@ -26,24 +25,26 @@ function submit(): void {
             <TextInput
                 v-if="!isUsingRecoveryCode"
                 id="code"
-                v-model="code"
+                v-model="form.code"
                 name="code"
                 autocomplete="one-time-code"
                 inputmode="numeric"
                 placeholder="123456"
                 label="Authentication code"
                 autofocus
+                :error="form.errors.code"
             />
 
             <TextInput
                 v-else
                 id="recovery_code"
-                v-model="recoveryCode"
+                v-model="form.recovery_code"
                 name="recovery_code"
                 autocomplete="one-time-code"
                 placeholder="xxxx-xxxx-xxxx"
                 label="Recovery code"
                 autofocus
+                :error="form.errors.recovery_code"
             />
 
             <div class="flex justify-end">
@@ -65,7 +66,7 @@ function submit(): void {
                 </button>
             </div>
 
-            <Button type="submit" class="w-full">
+            <Button type="submit" class="w-full" :disabled="form.processing">
                 Sign in
                 <Icon name="arrow-right" class="h-4 w-4" />
             </Button>

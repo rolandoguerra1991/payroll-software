@@ -21,6 +21,7 @@ const mountSidebar = (props: Record<string, unknown> = {}) =>
             switchLabel: 'Open employee portal',
             switchHref: '/portal/dashboard',
             switchIcon: 'wallet',
+            logoutHref: '/logout',
             ...props,
         },
     });
@@ -36,6 +37,7 @@ describe('AppSidebar', () => {
         expect(text).toContain('Ana Rivas');
         expect(text).toContain('HR Coordinator');
         expect(text).toContain('Open employee portal');
+        expect(text).toContain('Sign out');
     });
 
     it('builds the user initials from the full name', () => {
@@ -45,7 +47,7 @@ describe('AppSidebar', () => {
     it('highlights the active link and dims the rest', () => {
         const links = mountSidebar().findAll('link-stub');
 
-        expect(links).toHaveLength(3);
+        expect(links).toHaveLength(4);
         expect(links[0].attributes('aria-current')).toBe('page');
         expect(links[0].classes()).toContain('bg-blue-50');
         expect(links[1].attributes('aria-current')).toBeUndefined();
@@ -73,6 +75,19 @@ describe('AppSidebar', () => {
         const wrapper = mountSidebar();
 
         await wrapper.findAll('link-stub')[2].trigger('click');
+
+        expect(wrapper.emitted('close')).toHaveLength(1);
+    });
+
+    it('signs the user out with a POST request', async () => {
+        const wrapper = mountSidebar();
+        const logout = wrapper.findAll('link-stub')[3];
+
+        expect(logout.attributes('href')).toBe('/logout');
+        expect(logout.attributes('method')).toBe('post');
+        expect(logout.text()).toBe('Sign out');
+
+        await logout.trigger('click');
 
         expect(wrapper.emitted('close')).toHaveLength(1);
     });

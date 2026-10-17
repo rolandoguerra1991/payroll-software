@@ -3,14 +3,18 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import AuthLayout from '@/layouts/AuthLayout.vue';
 import TwoFactorChallenge from '@/pages/auth/TwoFactorChallenge.vue';
 
-const visit = vi.hoisted(() => vi.fn());
+const form = vi.hoisted(() => ({
+    errors: {} as Record<string, string>,
+    processing: false,
+    post: vi.fn(),
+}));
 
 vi.mock('@inertiajs/vue3', async (importOriginal) => {
     const actual = await importOriginal<typeof import('@inertiajs/vue3')>();
 
     return {
         ...actual,
-        router: { visit },
+        useForm: (data: Record<string, unknown>) => ({ ...data, ...form }),
     };
 });
 
@@ -24,7 +28,8 @@ const findToggle = (wrapper: ReturnType<typeof mountPage>, label: string) =>
 
 describe('auth/TwoFactorChallenge', () => {
     beforeEach(() => {
-        visit.mockClear();
+        form.errors = {};
+        form.post.mockClear();
     });
 
     it('renders the two factor copy through the auth layout', () => {
@@ -81,11 +86,35 @@ describe('auth/TwoFactorChallenge', () => {
         expect(wrapper.find('#recovery_code').exists()).toBe(false);
     });
 
-    it('opens the HR panel once the challenge is answered', async () => {
+    it('shows the message returned by the challenge endpoint', () => {
+        form.errors = {
+            code: 'The provided two factor authentication code was invalid.',
+        };
+
+        expect(mountPage().find('[role="alert"]').text()).toBe(
+            'The provided two factor authentication code was invalid.',
+        );
+    });
+
+    it('shows the message returned for an invalid recovery code', async () => {
+        form.errors = {
+            recovery_code: 'The provided two factor recovery code was invalid.',
+        };
+
+        const wrapper = mountPage();
+
+        await findToggle(wrapper, 'Use a recovery code')?.trigger('click');
+
+        expect(wrapper.find('[role="alert"]').text()).toBe(
+            'The provided two factor recovery code was invalid.',
+        );
+    });
+
+    it('answers the two factor challenge', async () => {
         const wrapper = mountPage();
 
         await wrapper.find('form').trigger('submit');
 
-        expect(visit).toHaveBeenCalledWith('/admin/dashboard');
+        expect(form.post).toHaveBeenCalledWith('/two-factor-challenge');
     });
 });
