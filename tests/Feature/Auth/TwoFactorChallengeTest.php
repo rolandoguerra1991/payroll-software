@@ -53,7 +53,7 @@ test('authenticates the challenged user with a valid code', function () {
     ]);
 
     $this->assertAuthenticatedAs($user);
-    $response->assertRedirect('/admin/dashboard');
+    $response->assertRedirect('/portal/dashboard');
 });
 
 test('rejects an invalid two factor code', function () {
@@ -74,7 +74,7 @@ test('authenticates the challenged user with a recovery code', function () {
     $response = $this->post('/two-factor-challenge', ['recovery_code' => 'recovery-code-one']);
 
     $this->assertAuthenticatedAs($user);
-    $response->assertRedirect('/admin/dashboard');
+    $response->assertRedirect('/portal/dashboard');
 
     // Fortify burns the used recovery code and issues a fresh one in its place.
     $codes = $user->refresh()->recoveryCodes();

@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\UserRole;
 use App\Models\User;
 use Inertia\Testing\AssertableInertia as Assert;
 
@@ -10,14 +11,18 @@ test('renders the login screen for a guest', function () {
     $response->assertInertia(fn (Assert $page) => $page->component('auth/Login'));
 });
 
-test('redirects an authenticated user away from the login screen', function () {
-    $response = $this->actingAs(User::factory()->create())->get('/login');
+test('redirects an authenticated user away from the login screen to their panel', function (UserRole $role, string $path) {
+    $response = $this->actingAs(User::factory()->create(['role' => $role]))->get('/login');
 
-    $response->assertRedirect('/admin/dashboard');
-});
+    $response->assertRedirect($path);
+})->with([
+    'administrator' => [UserRole::Admin, '/admin/dashboard'],
+    'human resources' => [UserRole::Hr, '/admin/dashboard'],
+    'employee' => [UserRole::Employee, '/portal/dashboard'],
+]);
 
 test('authenticates a user with valid credentials', function () {
-    $user = User::factory()->create();
+    $user = User::factory()->employee()->create();
 
     $response = $this->post('/login', [
         'email' => $user->email,
@@ -25,7 +30,7 @@ test('authenticates a user with valid credentials', function () {
     ]);
 
     $this->assertAuthenticatedAs($user);
-    $response->assertRedirect('/admin/dashboard');
+    $response->assertRedirect('/portal/dashboard');
 });
 
 test('rejects credentials that do not match a user', function () {
@@ -87,7 +92,7 @@ test('redirects guests from the application pages to the login screen', function
 ]);
 
 test('renders the HR dashboard for an authenticated user', function () {
-    $response = $this->actingAs(User::factory()->create())->get('/admin/dashboard');
+    $response = $this->actingAs(User::factory()->hr()->create())->get('/admin/dashboard');
 
     $response->assertOk();
     $response->assertInertia(fn (Assert $page) => $page->component('admin/Dashboard'));

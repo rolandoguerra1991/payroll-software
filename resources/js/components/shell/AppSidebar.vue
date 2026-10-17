@@ -12,9 +12,9 @@ const props = defineProps<{
     brand: string;
     caption: string;
     user: SidebarUser;
-    switchLabel: string;
-    switchHref: string;
-    switchIcon: IconName;
+    switchLabel?: string;
+    switchHref?: string;
+    switchIcon?: IconName;
     logoutHref: string;
 }>();
 
@@ -90,6 +90,7 @@ const initials = computed(() =>
 
         <div class="border-t border-slate-200 p-4 dark:border-slate-800">
             <Link
+                v-if="switchHref && switchLabel && switchIcon"
                 :href="switchHref"
                 class="mb-3 flex items-center gap-3 rounded-lg border border-dashed border-slate-300 px-3 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
                 @click="emit('close')"

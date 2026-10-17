@@ -40,6 +40,17 @@ describe('AppSidebar', () => {
         expect(text).toContain('Sign out');
     });
 
+    it('hides the panel switch when no target panel is available', () => {
+        const wrapper = mountSidebar({
+            switchLabel: undefined,
+            switchHref: undefined,
+            switchIcon: undefined,
+        });
+
+        expect(wrapper.text()).not.toContain('Open employee portal');
+        expect(wrapper.findAll('link-stub')).toHaveLength(3);
+    });
+
     it('builds the user initials from the full name', () => {
         expect(mountSidebar().text()).toContain('AR');
     });

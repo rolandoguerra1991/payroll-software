@@ -17,7 +17,7 @@ test('renders the password confirmation screen for an authenticated user', funct
 });
 
 test('confirms the password of the authenticated user', function () {
-    $user = User::factory()->create();
+    $user = User::factory()->admin()->create();
 
     $response = $this->actingAs($user)->post('/user/confirm-password', [
         'password' => 'password',
