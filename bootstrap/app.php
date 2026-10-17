@@ -18,6 +18,10 @@ return Application::configure(basePath: dirname(__DIR__))
             HandleInertiaRequests::class,
             AddLinkHeadersForPreloadedAssets::class,
         ]);
+
+        // Without this, the guest middleware resolves the authenticated redirect
+        // to the "home" route, which points back at the login screen.
+        $middleware->redirectUsersTo(fn (): string => config('fortify.home'));
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(
