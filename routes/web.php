@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\DepartmentController;
 use Illuminate\Support\Facades\Route;
 
 Route::redirect('/', '/login')->name('home');
@@ -8,7 +9,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:admin,hr'])->g
     Route::inertia('/dashboard', 'admin/Dashboard')->name('dashboard');
     Route::inertia('/employees', 'admin/Employees')->name('employees');
     Route::inertia('/attendance', 'admin/Attendance')->name('attendance');
-    Route::inertia('/departments', 'admin/Departments')->name('departments');
+    Route::resource('departments', DepartmentController::class)->only(['index', 'store', 'update', 'destroy']);
     Route::inertia('/positions', 'admin/Positions')->name('positions');
 });
 

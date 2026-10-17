@@ -14,6 +14,8 @@ const props = withDefaults(
     { variant: 'primary', href: undefined, type: 'button', disabled: false },
 );
 
+const emit = defineEmits<{ click: [event: MouseEvent] }>();
+
 const base =
     'inline-flex h-10 items-center justify-center gap-2 rounded-lg px-4 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50';
 
@@ -35,6 +37,7 @@ const classes = cn(base, variants[props.variant]);
         v-if="href"
         :href="href"
         :class="classes"
+        @click="emit('click', $event)"
     >
         <slot />
     </Link>
@@ -43,6 +46,7 @@ const classes = cn(base, variants[props.variant]);
         :type="type"
         :disabled="disabled"
         :class="classes"
+        @click="emit('click', $event)"
     >
         <slot />
     </button>
