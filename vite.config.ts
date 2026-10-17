@@ -6,6 +6,14 @@ import laravel from 'laravel-vite-plugin';
 import { bunny } from 'laravel-vite-plugin/fonts';
 import { defineConfig, lazyPlugins } from 'vite-plus';
 
+// Vitest reuses this Vite config, but a unit test run is not Laravel's HMR dev
+// server. Without this, laravel-vite-plugin aborts every test run inside CI
+// with "You should not run the Vite HMR server in CI environments". The guard
+// stays active for `npm run dev` and `npm run build`.
+if (process.env.VITEST) {
+    process.env.LARAVEL_BYPASS_ENV_CHECK = '1';
+}
+
 export default defineConfig({
     plugins: lazyPlugins(() => [
         laravel({
@@ -42,11 +50,36 @@ export default defineConfig({
             ],
         },
     },
+    test: {
+        environment: 'jsdom',
+        include: ['resources/js/tests/**/*.test.ts'],
+        coverage: {
+            provider: 'v8',
+            reporter: [['text', { skipFull: false }], 'html'],
+            reportsDirectory: 'coverage',
+            // Only production source. Add an entry here when a new source
+            // folder is created (e.g. stores, services).
+            include: [
+                'resources/js/components/**/*.{ts,vue}',
+                'resources/js/composables/**/*.{ts,vue}',
+                'resources/js/layouts/**/*.{ts,vue}',
+                'resources/js/lib/**/*.ts',
+                'resources/js/pages/**/*.{ts,vue}',
+            ],
+            exclude: ['resources/js/components/ui/**'],
+            // Every source file must be fully covered; CI fails otherwise.
+            thresholds: {
+                100: true,
+                perFile: true,
+            },
+        },
+    },
     lint: {
         ignorePatterns: [
             'vendor/**',
             'node_modules/**',
             'public/**',
+            'coverage/**',
             'bootstrap/ssr/**',
             'tailwind.config.js',
             'resources/js/actions/**',
@@ -69,6 +102,7 @@ export default defineConfig({
         ignorePatterns: [
             '.github/**',
             'composer.json',
+            'coverage/**',
             'resources/js/components/ui/*',
             'resources/views/mail/*',
         ],
