@@ -6,6 +6,14 @@ import laravel from 'laravel-vite-plugin';
 import { bunny } from 'laravel-vite-plugin/fonts';
 import { defineConfig, lazyPlugins } from 'vite-plus';
 
+// Vitest reuses this Vite config, but a unit test run is not Laravel's HMR dev
+// server. Without this, laravel-vite-plugin aborts every test run inside CI
+// with "You should not run the Vite HMR server in CI environments". The guard
+// stays active for `npm run dev` and `npm run build`.
+if (process.env.VITEST) {
+    process.env.LARAVEL_BYPASS_ENV_CHECK = '1';
+}
+
 export default defineConfig({
     plugins: lazyPlugins(() => [
         laravel({
