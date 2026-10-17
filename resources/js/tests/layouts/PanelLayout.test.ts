@@ -36,6 +36,7 @@ describe('PanelLayout', () => {
             icon: 'users',
         });
         expect(sidebar.props('switchLabel')).toBe('Open employee portal');
+        expect(sidebar.props('logoutHref')).toBe('/logout');
     });
 
     it('uses the employee portal on portal routes', () => {

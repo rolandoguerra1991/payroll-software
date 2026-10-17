@@ -100,6 +100,10 @@ export default defineConfig({
         singleAttributePerLine: false,
         htmlWhitespaceSensitivity: 'css',
         ignorePatterns: [
+            // Agent skills are reference material, not source: several are
+            // published by Boost (MIT) and the formatter rewrites their
+            // markdown tables, which boost:update then overwrites.
+            '.agents/**',
             '.github/**',
             'composer.json',
             'coverage/**',

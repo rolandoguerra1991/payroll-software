@@ -3,14 +3,18 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import AuthLayout from '@/layouts/AuthLayout.vue';
 import ConfirmPassword from '@/pages/auth/ConfirmPassword.vue';
 
-const visit = vi.hoisted(() => vi.fn());
+const form = vi.hoisted(() => ({
+    errors: {} as Record<string, string>,
+    processing: false,
+    post: vi.fn(),
+}));
 
 vi.mock('@inertiajs/vue3', async (importOriginal) => {
     const actual = await importOriginal<typeof import('@inertiajs/vue3')>();
 
     return {
         ...actual,
-        router: { visit },
+        useForm: (data: Record<string, unknown>) => ({ ...data, ...form }),
     };
 });
 
@@ -21,7 +25,8 @@ const mountPage = () =>
 
 describe('auth/ConfirmPassword', () => {
     beforeEach(() => {
-        visit.mockClear();
+        form.errors = {};
+        form.post.mockClear();
     });
 
     it('renders the secure area copy through the auth layout', () => {
@@ -54,11 +59,19 @@ describe('auth/ConfirmPassword', () => {
         );
     });
 
-    it('returns to the HR panel once the password is confirmed', async () => {
+    it('shows the message returned by the confirmation endpoint', () => {
+        form.errors = { password: 'The provided password was incorrect.' };
+
+        expect(mountPage().find('[role="alert"]').text()).toBe(
+            'The provided password was incorrect.',
+        );
+    });
+
+    it('confirms the password against Fortify', async () => {
         const wrapper = mountPage();
 
         await wrapper.find('form').trigger('submit');
 
-        expect(visit).toHaveBeenCalledWith('/admin/dashboard');
+        expect(form.post).toHaveBeenCalledWith('/user/confirm-password');
     });
 });

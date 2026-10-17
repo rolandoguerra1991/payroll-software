@@ -1,18 +1,26 @@
 <script setup lang="ts">
-import { Link, router } from '@inertiajs/vue3';
-import { ref } from 'vue';
+import { Link, useForm } from '@inertiajs/vue3';
 import Button from '@/components/ui/Button.vue';
 import Icon from '@/components/ui/Icon.vue';
 import TextInput from '@/components/ui/TextInput.vue';
 import AuthLayout from '@/layouts/AuthLayout.vue';
 import { login } from '@/routes';
+import { update as passwordUpdate } from '@/routes/password';
 
-const email = ref('carlos.mendez@company.com');
-const password = ref('');
-const passwordConfirmation = ref('');
+const props = defineProps<{
+    email: string;
+    token: string;
+}>();
+
+const form = useForm({
+    token: props.token,
+    email: props.email,
+    password: '',
+    password_confirmation: '',
+});
 
 function submit(): void {
-    router.visit(login.url());
+    form.post(passwordUpdate.url());
 }
 </script>
 
@@ -25,27 +33,29 @@ function submit(): void {
         <form class="mt-8 space-y-5" @submit.prevent="submit">
             <TextInput
                 id="email"
-                v-model="email"
+                v-model="form.email"
                 type="email"
                 name="email"
                 autocomplete="username"
                 label="Work email"
+                :error="form.errors.email"
             />
 
             <TextInput
                 id="password"
-                v-model="password"
+                v-model="form.password"
                 type="password"
                 name="password"
                 autocomplete="new-password"
                 placeholder="••••••••"
                 label="New password"
                 autofocus
+                :error="form.errors.password"
             />
 
             <TextInput
                 id="password_confirmation"
-                v-model="passwordConfirmation"
+                v-model="form.password_confirmation"
                 type="password"
                 name="password_confirmation"
                 autocomplete="new-password"
@@ -53,7 +63,7 @@ function submit(): void {
                 label="Confirm password"
             />
 
-            <Button type="submit" class="w-full">
+            <Button type="submit" class="w-full" :disabled="form.processing">
                 Reset password
                 <Icon name="arrow-right" class="h-4 w-4" />
             </Button>

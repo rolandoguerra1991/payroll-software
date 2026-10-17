@@ -13,6 +13,7 @@ const props = withDefaults(
         placeholder?: string;
         inputmode?: 'none' | 'text' | 'tel' | 'url' | 'email' | 'numeric';
         autofocus?: boolean;
+        error?: string;
     }>(),
     {
         type: 'text',
@@ -51,7 +52,17 @@ onMounted(() => {
             :placeholder="placeholder"
             :inputmode="inputmode"
             :autofocus="autofocus ? true : undefined"
+            :aria-invalid="error ? true : undefined"
+            :aria-describedby="error ? id + '-error' : undefined"
             class="mt-2 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none dark:border-slate-700 dark:bg-slate-900 dark:text-white dark:placeholder:text-slate-500"
         />
+        <p
+            v-if="error"
+            :id="id + '-error'"
+            role="alert"
+            class="mt-2 text-sm text-red-600 dark:text-red-400"
+        >
+            {{ error }}
+        </p>
     </div>
 </template>

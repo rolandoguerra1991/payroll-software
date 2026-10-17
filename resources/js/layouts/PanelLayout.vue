@@ -4,6 +4,7 @@ import { computed, ref } from 'vue';
 import AppSidebar from '@/components/shell/AppSidebar.vue';
 import Icon from '@/components/ui/Icon.vue';
 import { useTheme } from '@/composables/useTheme';
+import { logout } from '@/routes';
 import type { IconName, NavigationItem, SidebarUser } from '@/types';
 
 type PanelMeta = {
@@ -51,6 +52,7 @@ const portalPanel: PanelMeta = {
 const page = usePage();
 const sidebarOpen = ref(false);
 const { theme, toggleTheme } = useTheme();
+const logoutUrl = logout.url();
 
 const isAdmin = computed(() => page.url.startsWith('/admin'));
 const navigation = computed(() =>
@@ -82,6 +84,7 @@ const themeIcon = computed(() => (theme.value === 'dark' ? 'sun' : 'moon'));
             :switch-label="panel.switchLabel"
             :switch-href="panel.switchHref"
             :switch-icon="panel.switchIcon"
+            :logout-href="logoutUrl"
             @close="sidebarOpen = false"
         />
 

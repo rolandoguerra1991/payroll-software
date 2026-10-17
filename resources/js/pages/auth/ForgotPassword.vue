@@ -1,17 +1,18 @@
 <script setup lang="ts">
-import { Link } from '@inertiajs/vue3';
-import { ref } from 'vue';
+import { Link, useForm } from '@inertiajs/vue3';
 import Button from '@/components/ui/Button.vue';
 import Icon from '@/components/ui/Icon.vue';
 import TextInput from '@/components/ui/TextInput.vue';
 import AuthLayout from '@/layouts/AuthLayout.vue';
 import { login } from '@/routes';
+import { email as passwordEmail } from '@/routes/password';
 
-const email = ref('');
-const status = ref('');
+defineProps<{ status?: string }>();
+
+const form = useForm({ email: '' });
 
 function submit(): void {
-    status.value = 'We have emailed your password reset link.';
+    form.post(passwordEmail.url());
 }
 </script>
 
@@ -32,16 +33,17 @@ function submit(): void {
         <form class="mt-8 space-y-5" @submit.prevent="submit">
             <TextInput
                 id="email"
-                v-model="email"
+                v-model="form.email"
                 type="email"
                 name="email"
                 autocomplete="email"
                 placeholder="you@company.com"
                 label="Work email"
                 autofocus
+                :error="form.errors.email"
             />
 
-            <Button type="submit" class="w-full">
+            <Button type="submit" class="w-full" :disabled="form.processing">
                 Email password reset link
                 <Icon name="arrow-right" class="h-4 w-4" />
             </Button>

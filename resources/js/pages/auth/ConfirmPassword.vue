@@ -1,16 +1,15 @@
 <script setup lang="ts">
-import { router } from '@inertiajs/vue3';
-import { ref } from 'vue';
+import { useForm } from '@inertiajs/vue3';
 import Button from '@/components/ui/Button.vue';
 import Icon from '@/components/ui/Icon.vue';
 import TextInput from '@/components/ui/TextInput.vue';
 import AuthLayout from '@/layouts/AuthLayout.vue';
-import { dashboard as adminDashboard } from '@/routes/admin';
+import { store as passwordConfirmStore } from '@/routes/password/confirm';
 
-const password = ref('');
+const form = useForm({ password: '' });
 
 function submit(): void {
-    router.visit(adminDashboard.url());
+    form.post(passwordConfirmStore.url());
 }
 </script>
 
@@ -23,16 +22,17 @@ function submit(): void {
         <form class="mt-8 space-y-5" @submit.prevent="submit">
             <TextInput
                 id="password"
-                v-model="password"
+                v-model="form.password"
                 type="password"
                 name="password"
                 autocomplete="current-password"
                 placeholder="••••••••"
                 label="Password"
                 autofocus
+                :error="form.errors.password"
             />
 
-            <Button type="submit" class="w-full">
+            <Button type="submit" class="w-full" :disabled="form.processing">
                 Confirm
                 <Icon name="arrow-right" class="h-4 w-4" />
             </Button>

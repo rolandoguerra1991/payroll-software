@@ -3,25 +3,37 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import AuthLayout from '@/layouts/AuthLayout.vue';
 import ResetPassword from '@/pages/auth/ResetPassword.vue';
 
-const visit = vi.hoisted(() => vi.fn());
+const form = vi.hoisted(() => ({
+    data: {} as Record<string, unknown>,
+    errors: {} as Record<string, string>,
+    processing: false,
+    post: vi.fn(),
+}));
 
 vi.mock('@inertiajs/vue3', async (importOriginal) => {
     const actual = await importOriginal<typeof import('@inertiajs/vue3')>();
 
     return {
         ...actual,
-        router: { visit },
+        useForm: (data: Record<string, unknown>) => {
+            Object.assign(form.data, data);
+
+            return { ...data, ...form };
+        },
     };
 });
 
 const mountPage = () =>
     shallowMount(ResetPassword, {
+        props: { email: 'carlos.mendez@company.com', token: 'reset-token' },
         global: { renderStubDefaultSlot: true, stubs: { TextInput: false } },
     });
 
 describe('auth/ResetPassword', () => {
     beforeEach(() => {
-        visit.mockClear();
+        form.data = {};
+        form.errors = {};
+        form.post.mockClear();
     });
 
     it('renders the reset copy through the auth layout', () => {
@@ -34,7 +46,7 @@ describe('auth/ResetPassword', () => {
         );
     });
 
-    it('renders the prefilled email and the password fields', () => {
+    it('renders the email and password fields from the signed link', () => {
         const wrapper = mountPage();
         const email = wrapper.find<HTMLInputElement>('#email');
 
@@ -47,6 +59,13 @@ describe('auth/ResetPassword', () => {
         ).toBe(true);
         expect(wrapper.find('#password_confirmation').exists()).toBe(true);
         expect(wrapper.find('link-stub').attributes('href')).toBe('/login');
+    });
+
+    it('sends the reset token from the link with the new password', () => {
+        mountPage();
+
+        expect(form.data.token).toBe('reset-token');
+        expect(form.data.email).toBe('carlos.mendez@company.com');
     });
 
     it('keeps the typed credentials in the form state', async () => {
@@ -70,11 +89,21 @@ describe('auth/ResetPassword', () => {
         ).toBe('new-secret-password');
     });
 
-    it('returns to sign in once the password is reset', async () => {
+    it('shows the message returned by the reset endpoint', () => {
+        form.errors = {
+            password: 'This password has been leaked in a data breach.',
+        };
+
+        expect(mountPage().find('[role="alert"]').text()).toBe(
+            'This password has been leaked in a data breach.',
+        );
+    });
+
+    it('submits the new password', async () => {
         const wrapper = mountPage();
 
         await wrapper.find('form').trigger('submit');
 
-        expect(visit).toHaveBeenCalledWith('/login');
+        expect(form.post).toHaveBeenCalledWith('/reset-password');
     });
 });

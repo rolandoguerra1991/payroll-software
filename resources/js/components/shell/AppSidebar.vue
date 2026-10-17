@@ -15,6 +15,7 @@ const props = defineProps<{
     switchLabel: string;
     switchHref: string;
     switchIcon: IconName;
+    logoutHref: string;
 }>();
 
 const emit = defineEmits<{ close: [] }>();
@@ -95,6 +96,17 @@ const initials = computed(() =>
             >
                 <Icon :name="switchIcon" class="h-4 w-4 shrink-0" />
                 {{ switchLabel }}
+            </Link>
+
+            <Link
+                :href="logoutHref"
+                method="post"
+                as="button"
+                class="mb-3 flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white"
+                @click="emit('close')"
+            >
+                <Icon name="logout" class="h-4 w-4 shrink-0" />
+                Sign out
             </Link>
 
             <div class="flex items-center gap-3 px-1">
